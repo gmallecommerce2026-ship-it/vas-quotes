@@ -3,6 +3,6 @@
 4:I[97367,["/vas-quotes/_next/static/chunks/ff1a16fafef87110.js","/vas-quotes/_next/static/chunks/247eb132b7f7b574.js"],"MetadataBoundary"]
 5:"$Sreact.suspense"
 7:I[27201,["/vas-quotes/_next/static/chunks/ff1a16fafef87110.js","/vas-quotes/_next/static/chunks/247eb132b7f7b574.js"],"IconMark"]
-0:{"buildId":"GPoMdEgw8R-35_Sv8mu5q","rsc":["$","$1","h",{"children":[null,["$","$L2",null,{"children":"$@3"}],["$","div",null,{"hidden":true,"children":["$","$L4",null,{"children":["$","$5",null,{"name":"Next.Metadata","children":"$@6"}]}]}],["$","meta",null,{"name":"next-size-adjust","content":""}]]}],"loading":null,"isPartial":false}
+0:{"buildId":"KRdUW-81g_OBrs4pPyVW5","rsc":["$","$1","h",{"children":[null,["$","$L2",null,{"children":"$@3"}],["$","div",null,{"hidden":true,"children":["$","$L4",null,{"children":["$","$5",null,{"name":"Next.Metadata","children":"$@6"}]}]}],["$","meta",null,{"name":"next-size-adjust","content":""}]]}],"loading":null,"isPartial":false}
 3:[["$","meta","0",{"charSet":"utf-8"}],["$","meta","1",{"name":"viewport","content":"width=device-width, initial-scale=1"}]]
 6:[["$","title","0",{"children":"VAS Lighting Home"}],["$","meta","1",{"name":"description","content":"Lighting Design"}],["$","link","2",{"rel":"icon","href":"/vas-quotes/favicon.ico?favicon.7cdd2424.ico","sizes":"48x48","type":"image/x-icon"}],["$","$L7","3",{}]]
