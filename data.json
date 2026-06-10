@@ -1,0 +1,22 @@
+{
+  "categories": [
+    "Đèn LED",
+    "Dây cáp",
+    "Công tắc",
+    "Trang trí"
+  ],
+  "products": [
+    {
+      "id": 1781117777629,
+      "name": "offfdf",
+      "category": "Đèn LED",
+      "unit": "Cái",
+      "price": 3345422,
+      "stock": 0,
+      "specs": "- cong 12n\n- ff",
+      "image": "/images/img_1781117777604.jpg"
+    }
+  ],
+  "savedQuotes": [],
+  "history": []
+}
