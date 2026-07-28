@@ -1,7 +1,7 @@
 "use client"
 import { useState, useRef, useCallback, useEffect } from "react";
 import { Search, Package, Plus, X, Edit3, Save, Camera, Move } from "lucide-react";
-import { useLocalDatabase } from "@/hooks/useLocalDatabase"; // Đảm bảo đường dẫn này đúng với dự án của bạn
+import { useLocalDatabase } from "@/hooks/useLocalDatabase";
 
 // ─── Image Cropper Component ──────────────────────────────────────────────────
 function ImageCropper({ src, onCrop, onCancel }: { src: string; onCrop: (croppedDataUrl: string) => void; onCancel: () => void }) {
@@ -108,11 +108,11 @@ function ImageCropper({ src, onCrop, onCancel }: { src: string; onCrop: (cropped
         canvas.height = 400;
         const ctx = canvas.getContext("2d")!;
         ctx.drawImage(imgRef.current, srcX, srcY, srcSize, srcSize, 0, 0, 400, 400);
-        onCrop(canvas.toDataURL("image/jpeg", 0.88)); // Nén JPEG cho nhẹ
+        onCrop(canvas.toDataURL("image/jpeg", 0.88)); 
     };
 
     return (
-        <div className="fixed inset-0 z-[200] bg-black flex flex-col">
+        <div className="fixed inset-0 z-[200] bg-black flex flex-col animate-in fade-in duration-200">
             <div className="flex justify-between items-center px-4 py-3 text-white">
                 <button onClick={onCancel} className="text-sm font-medium text-slate-300">Hủy</button>
                 <span className="text-sm font-semibold">Cắt ảnh</span>
@@ -216,7 +216,77 @@ function ImageUploadArea({ value, onChange }: { value: string | null; onChange: 
         </>
     );
 }
+const ProductForm = ({ formData, setFormData, specLines, setSpecLines, categories, onSave, onCancel }: any) => (
+    <div className="p-4 space-y-4 overflow-y-auto">
+        <div className="w-2/5 mx-auto">
+            <ImageUploadArea value={formData.image} onChange={(url) => setFormData({ ...formData, image: url })} />
+        </div>
 
+        <div>
+            <label className="text-xs font-semibold text-slate-500 mb-1 block">Tên vật tư / Hàng hóa *</label>
+            <input type="text" placeholder="Nhập tên..." value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                className="w-full bg-slate-50 border border-slate-200 text-sm p-3 rounded-xl outline-none focus:border-blue-500 transition-colors"
+            />
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+            <div>
+                <label className="text-xs font-semibold text-slate-500 mb-1 block">Danh mục *</label>
+                <select value={formData.category} onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                    className="w-full bg-slate-50 border border-slate-200 text-sm p-3 rounded-xl outline-none focus:border-blue-500 text-slate-700 transition-colors">
+                    {categories.length > 0 ? (
+                        categories.map((cat: string, i: number) => <option key={i} value={cat}>{cat}</option>)
+                    ) : (
+                        <option value="">Chưa có danh mục</option>
+                    )}
+                </select>
+            </div>
+            <div>
+                <label className="text-xs font-semibold text-slate-500 mb-1 block">Đơn vị tính</label>
+                <input type="text" placeholder="Cái, Cuộn..." value={formData.unit}
+                    onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
+                    className="w-full bg-slate-50 border border-slate-200 text-sm p-3 rounded-xl outline-none focus:border-blue-500 transition-colors"
+                />
+            </div>
+        </div>
+
+        <div>
+            <label className="text-xs font-semibold text-slate-500 mb-1 block">Đơn giá (VNĐ) *</label>
+            <input type="text" inputMode="numeric" placeholder="0" value={formData.price}
+                onChange={(e) => {
+                    const raw = e.target.value.replace(/\D/g, "");
+                    setFormData({ ...formData, price: raw ? parseInt(raw).toLocaleString("vi-VN") : "" });
+                }}
+                className="w-full bg-slate-50 border border-slate-200 text-sm p-3 rounded-xl outline-none focus:border-blue-500 font-semibold text-blue-600 transition-colors"
+            />
+        </div>
+
+        <div className="bg-slate-50/50 p-3 rounded-xl border border-slate-100">
+            <label className="text-xs font-semibold text-slate-500 mb-2 block">Thông số kỹ thuật</label>
+            <div className="space-y-2">
+                {specLines.map((line: string, index: number) => (
+                    <div key={index} className="flex items-center gap-2">
+                        <span className="text-slate-400 font-bold">-</span>
+                        <input type="text" placeholder="VD: Công suất 12W..." value={line}
+                            onChange={(e) => {
+                                const newLines = [...specLines];
+                                newLines[index] = e.target.value;
+                                setSpecLines(newLines);
+                            }}
+                            className="flex-1 bg-white border border-slate-200 text-[13px] p-2 rounded-lg outline-none focus:border-blue-500 transition-colors"
+                        />
+                        <button onClick={() => setSpecLines(specLines.filter((_: any, i: number) => i !== index).length > 0 ? specLines.filter((_: any, i: number) => i !== index) : [""])}
+                            className="p-2 text-slate-400 hover:text-red-500 transition-colors"><X size={16} /></button>
+                    </div>
+                ))}
+                <button onClick={() => setSpecLines([...specLines, ""])} className="text-xs font-medium text-blue-600 flex items-center gap-1 mt-2 hover:text-blue-700 transition-colors">
+                    <Plus size={14} /> Thêm thông số
+                </button>
+            </div>
+        </div>
+    </div>
+);
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function ProductsPage() {
     const { db, saveDb, isLoaded } = useLocalDatabase();
@@ -255,7 +325,7 @@ export default function ProductsPage() {
         price: parseInt(formData.price.replace(/\D/g, "")) || 0,
         stock: parseInt(formData.stock.replace(/\D/g, "")) || 0,
         specs: specLines.map(l => l.trim()).filter(Boolean).map(l => `- ${l}`).join("\n"),
-        image: formData.image, // formData.image là Base64 đã cắt nén nhẹ
+        image: formData.image, 
     });
 
     const handleSaveNewProduct = () => {
@@ -264,7 +334,6 @@ export default function ProductsPage() {
         const newProduct = buildProduct({ id: Date.now() });
         const newProductsList = [newProduct, ...products];
         
-        // Lưu thẳng vào Local Database
         saveDb({ ...db, products: newProductsList });
         setIsAddModalOpen(false);
     };
@@ -275,7 +344,6 @@ export default function ProductsPage() {
         const updated = buildProduct(selectedProduct);
         const newProductsList = products.map((p: any) => p.id === selectedProduct.id ? updated : p);
         
-        // Lưu thẳng vào Local Database
         saveDb({ ...db, products: newProductsList });
         setSelectedProduct(updated);
         setIsEditing(false);
@@ -310,74 +378,6 @@ export default function ProductsPage() {
         const lines = [...specLines]; lines[index] = value; setSpecLines(lines);
     };
 
-    const FormBody = () => (
-        <div className="p-4 space-y-4 overflow-y-auto">
-            <div className="w-2/5 mx-auto">
-                <ImageUploadArea value={formData.image} onChange={(url) => setFormData({ ...formData, image: url })} />
-            </div>
-
-            <div>
-                <label className="text-xs font-semibold text-slate-500 mb-1 block">Tên vật tư / Hàng hóa *</label>
-                <input type="text" placeholder="Nhập tên..." value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full bg-slate-50 border border-slate-200 text-sm p-3 rounded-xl outline-none focus:border-blue-500"
-                />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-                <div>
-                    <label className="text-xs font-semibold text-slate-500 mb-1 block">Danh mục *</label>
-                    <select value={formData.category} onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                        className="w-full bg-slate-50 border border-slate-200 text-sm p-3 rounded-xl outline-none focus:border-blue-500 text-slate-700">
-                        {categories.length > 0 ? (
-                            categories.map((cat: string, i: number) => <option key={i} value={cat}>{cat}</option>)
-                        ) : (
-                            <option value="">Chưa có danh mục</option>
-                        )}
-                    </select>
-                </div>
-                <div>
-                    <label className="text-xs font-semibold text-slate-500 mb-1 block">Đơn vị tính</label>
-                    <input type="text" placeholder="Cái, Cuộn..." value={formData.unit}
-                        onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
-                        className="w-full bg-slate-50 border border-slate-200 text-sm p-3 rounded-xl outline-none focus:border-blue-500"
-                    />
-                </div>
-            </div>
-
-            <div>
-                <label className="text-xs font-semibold text-slate-500 mb-1 block">Đơn giá (VNĐ) *</label>
-                <input type="text" inputMode="numeric" placeholder="0" value={formData.price}
-                    onChange={(e) => {
-                        const raw = e.target.value.replace(/\D/g, "");
-                        setFormData({ ...formData, price: raw ? parseInt(raw).toLocaleString("vi-VN") : "" });
-                    }}
-                    className="w-full bg-slate-50 border border-slate-200 text-sm p-3 rounded-xl outline-none focus:border-blue-500 font-semibold text-blue-600"
-                />
-            </div>
-
-            <div className="bg-slate-50/50 p-3 rounded-xl border border-slate-100">
-                <label className="text-xs font-semibold text-slate-500 mb-2 block">Thông số kỹ thuật</label>
-                <div className="space-y-2">
-                    {specLines.map((line, index) => (
-                        <div key={index} className="flex items-center gap-2">
-                            <span className="text-slate-400 font-bold">-</span>
-                            <input type="text" placeholder="VD: Công suất 12W..." value={line}
-                                onChange={(e) => handleSpecChange(index, e.target.value)}
-                                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); setSpecLines([...specLines, ""]); } }}
-                                className="flex-1 bg-white border border-slate-200 text-[13px] p-2 rounded-lg outline-none focus:border-blue-500"
-                            />
-                            <button onClick={() => setSpecLines(specLines.filter((_, i) => i !== index).length > 0 ? specLines.filter((_, i) => i !== index) : [""])}
-                                className="p-2 text-slate-400 hover:text-red-500"><X size={16} /></button>
-                        </div>
-                    ))}
-                    <button onClick={() => setSpecLines([...specLines, ""])} className="text-xs font-medium text-blue-600 flex items-center gap-1 mt-2">
-                        <Plus size={14} /> Thêm thông số
-                    </button>
-                </div>
-            </div>
-        </div>
-    );
 
     return (
         <div className="px-4 space-y-5 pt-4 pb-24 relative">
@@ -386,7 +386,7 @@ export default function ProductsPage() {
                     <h1 className="text-2xl font-bold text-slate-900">Quản lý sản phẩm</h1>
                     <p className="text-slate-500 text-sm">Kho thiết bị chiếu sáng</p>
                 </div>
-                <button onClick={handleOpenAddModal} className="bg-blue-100 text-blue-600 p-2 rounded-full hover:bg-blue-200 transition-colors">
+                <button onClick={handleOpenAddModal} className="bg-blue-100 text-blue-600 p-2 rounded-full hover:bg-blue-200 transition-colors active:scale-95">
                     <Plus size={24} />
                 </button>
             </header>
@@ -395,14 +395,14 @@ export default function ProductsPage() {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
                 <input type="text" placeholder="Tìm kiếm sản phẩm..." value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full bg-white border border-slate-100 shadow-sm pl-10 pr-4 py-3 rounded-xl text-sm outline-none focus:border-blue-500"
+                    className="w-full bg-white border border-slate-100 shadow-sm pl-10 pr-4 py-3 rounded-xl text-sm outline-none focus:border-blue-500 transition-colors"
                 />
             </div>
 
             <div className="flex gap-2 overflow-x-auto no-scrollbar py-1">
                 {["Tất cả", ...categories].map((cat: string) => (
                     <button key={cat} onClick={() => setActiveCategoryFilter(cat)}
-                        className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${activeCategoryFilter === cat ? "bg-slate-800 text-white" : "bg-white text-slate-600 border border-slate-200"}`}>
+                        className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${activeCategoryFilter === cat ? "bg-slate-800 text-white" : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"}`}>
                         {cat}
                     </button>
                 ))}
@@ -411,7 +411,7 @@ export default function ProductsPage() {
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                 {filteredProducts.length > 0 ? filteredProducts.map((item: any) => (
                     <div key={item.id} onClick={() => handleOpenDetailModal(item)}
-                        className="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between active:scale-[0.98] transition-transform cursor-pointer">
+                        className="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between active:scale-[0.98] transition-transform cursor-pointer hover:shadow-md hover:border-blue-100">
                         <div>
                             <div className="w-full aspect-square rounded-xl bg-slate-50 flex items-center justify-center text-slate-300 mb-2.5 overflow-hidden">
                                 {item.image ? (
@@ -428,7 +428,7 @@ export default function ProductsPage() {
                         </div>
                     </div>
                 )) : (
-                    <div className="col-span-2 text-center py-10 text-slate-400">
+                    <div className="col-span-2 sm:col-span-3 md:col-span-4 text-center py-10 text-slate-400">
                         <Package size={40} className="mx-auto mb-2 opacity-50" />
                         <p className="text-sm">Không tìm thấy sản phẩm nào</p>
                     </div>
@@ -437,14 +437,20 @@ export default function ProductsPage() {
 
             {/* ── MODAL: CHI TIẾT & CHỈNH SỬA ── */}
             {isDetailModalOpen && selectedProduct && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
-                    <div className="bg-white w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+                <div 
+                    className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200"
+                    onClick={() => setIsDetailModalOpen(false)} // Click ra ngoài để đóng
+                >
+                    <div 
+                        className="bg-white w-[95vw] max-w-md rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200"
+                        onClick={(e) => e.stopPropagation()} // Chặn sự kiện đóng khi click vào bên trong modal
+                    >
                         <div className="flex justify-between items-center p-4 border-b">
                             <h2 className="text-lg font-bold text-slate-800">{isEditing ? "Chỉnh sửa sản phẩm" : "Chi tiết sản phẩm"}</h2>
-                            <button onClick={() => setIsDetailModalOpen(false)} className="p-1.5 bg-slate-100 text-slate-500 rounded-full"><X size={18} /></button>
+                            <button onClick={() => setIsDetailModalOpen(false)} className="p-1.5 bg-slate-100 text-slate-500 rounded-full hover:bg-slate-200 transition-colors"><X size={18} /></button>
                         </div>
 
-                        <div className="overflow-y-auto">
+                        <div className="overflow-y-auto custom-scrollbar">
                             {!isEditing ? (
                                 <div className="p-4 space-y-4">
                                     <div className="w-full aspect-square rounded-2xl bg-slate-50 flex items-center justify-center text-slate-300 border overflow-hidden">
@@ -470,19 +476,25 @@ export default function ProductsPage() {
                                     )}
                                 </div>
                             ) : (
-                                <FormBody />
+                                <ProductForm 
+                                    formData={formData} 
+                                    setFormData={setFormData} 
+                                    specLines={specLines} 
+                                    setSpecLines={setSpecLines} 
+                                    categories={categories} 
+                                />
                             )}
                         </div>
 
                         <div className="p-4 border-t flex gap-3 bg-slate-50">
                             {!isEditing ? (
-                                <button onClick={handleStartEdit} className="w-full py-3 text-sm font-bold text-white bg-blue-600 rounded-xl hover:bg-blue-500 shadow-lg shadow-blue-500/30 flex items-center justify-center gap-1.5 transition-colors">
+                                <button onClick={handleStartEdit} className="w-full py-3 text-sm font-bold text-white bg-blue-600 rounded-xl hover:bg-blue-500 shadow-lg shadow-blue-500/30 flex items-center justify-center gap-1.5 transition-colors active:scale-95">
                                     <Edit3 size={16} /> Chỉnh sửa hàng hóa
                                 </button>
                             ) : (
                                 <>
-                                    <button onClick={() => setIsEditing(false)} className="flex-1 py-3 text-sm font-semibold bg-white border border-slate-200 rounded-xl">Hủy sửa</button>
-                                    <button onClick={handleUpdateProduct} className="flex-1 py-3 text-sm font-bold text-white bg-emerald-600 rounded-xl hover:bg-emerald-500 shadow-lg shadow-emerald-500/30 flex items-center justify-center gap-1.5 transition-colors">
+                                    <button onClick={() => setIsEditing(false)} className="flex-1 py-3 text-sm font-semibold bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors active:scale-95">Hủy sửa</button>
+                                    <button onClick={handleUpdateProduct} className="flex-1 py-3 text-sm font-bold text-white bg-emerald-600 rounded-xl hover:bg-emerald-500 shadow-lg shadow-emerald-500/30 flex items-center justify-center gap-1.5 transition-colors active:scale-95">
                                         <Save size={16} /> Cập nhật
                                     </button>
                                 </>
@@ -494,18 +506,30 @@ export default function ProductsPage() {
 
             {/* ── MODAL: THÊM MỚI ── */}
             {isAddModalOpen && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
-                    <div className="bg-white w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+                <div 
+                    className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200"
+                    onClick={() => setIsAddModalOpen(false)} // Click ra ngoài để đóng
+                >
+                    <div 
+                        className="bg-white w-[95vw] max-w-md rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200"
+                        onClick={(e) => e.stopPropagation()} // Chặn đóng khi click vào trong modal
+                    >
                         <div className="flex justify-between items-center p-4 border-b">
                             <h2 className="text-lg font-bold text-slate-800">Thêm sản phẩm mới</h2>
-                            <button onClick={() => setIsAddModalOpen(false)} className="p-1.5 bg-slate-100 text-slate-500 rounded-full"><X size={18} /></button>
+                            <button onClick={() => setIsAddModalOpen(false)} className="p-1.5 bg-slate-100 text-slate-500 rounded-full hover:bg-slate-200 transition-colors"><X size={18} /></button>
                         </div>
-                        <div className="overflow-y-auto flex-1">
-                            <FormBody />
+                        <div className="overflow-y-auto flex-1 custom-scrollbar">
+                            <ProductForm 
+                                formData={formData} 
+                                setFormData={setFormData} 
+                                specLines={specLines} 
+                                setSpecLines={setSpecLines} 
+                                categories={categories} 
+                            />
                         </div>
                         <div className="p-4 border-t flex gap-3 bg-slate-50">
-                            <button onClick={() => setIsAddModalOpen(false)} className="flex-1 py-3 text-sm font-semibold bg-white border border-slate-200 rounded-xl">Hủy</button>
-                            <button onClick={handleSaveNewProduct} className="flex-1 py-3 text-sm font-bold text-white bg-blue-600 rounded-xl shadow-lg shadow-blue-500/30">Lưu sản phẩm</button>
+                            <button onClick={() => setIsAddModalOpen(false)} className="flex-1 py-3 text-sm font-semibold bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors active:scale-95">Hủy</button>
+                            <button onClick={handleSaveNewProduct} className="flex-1 py-3 text-sm font-bold text-white bg-blue-600 rounded-xl shadow-lg shadow-blue-500/30 hover:bg-blue-500 transition-colors active:scale-95">Lưu sản phẩm</button>
                         </div>
                     </div>
                 </div>

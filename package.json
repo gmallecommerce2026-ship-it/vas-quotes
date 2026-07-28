@@ -3,10 +3,12 @@
   "version": "2.0.2",
   "private": true,
   "scripts": {
-    "dev": "next dev --webpack",
-    "build": "next build --webpack",
+    "dev": "next dev",
+    "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d out -t"
   },
   "dependencies": {
     "@fullcalendar/core": "^6.1.15",
@@ -21,6 +23,10 @@
     "apexcharts": "^4.7.0",
     "clsx": "^2.1.1",
     "flatpickr": "^4.6.13",
+    "html2canvas": "^1.4.1",
+    "html2canvas-pro": "^2.0.4",
+    "jspdf": "^4.2.1",
+    "jspdf-autotable": "^5.0.8",
     "lucide-react": "^0.552.0",
     "next": "^16.0.7",
     "react": "^19.2.1",
@@ -42,8 +48,10 @@
     "@types/react-dom": "^19",
     "@types/react-transition-group": "^4.4.12",
     "autoprefixer": "^10.4.21",
+    "baseline-browser-mapping": "^2.10.35",
     "eslint": "^9",
     "eslint-config-next": "^16.0.7",
+    "gh-pages": "^6.3.0",
     "postcss": "^8.5.6",
     "tailwindcss": "^4.1.16",
     "typescript": "^5"

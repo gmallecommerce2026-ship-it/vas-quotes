@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { FileText, Clock, ArrowLeft, Plus, Trash2, Minus, X, Eye, Share2, Search, Image as ImageIcon, Banknote, Save, Download } from "lucide-react";
 import { useLocalDatabase } from "@/hooks/useLocalDatabase"; // Đảm bảo đường dẫn này trỏ đúng tới hook của bạn
-
+import { useRef } from "react";
 export default function HistoryPage() {
     const { db, saveDb, isLoaded } = useLocalDatabase();
 
@@ -10,6 +10,7 @@ export default function HistoryPage() {
     const [editingQuote, setEditingQuote] = useState<any>(null);
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [addSearchQuery, setAddSearchQuery] = useState("");
+    const printRef = useRef<HTMLDivElement>(null);
 
     // Tránh lỗi Hydration Mismatch của Next.js
     if (!isLoaded) {
@@ -102,8 +103,66 @@ export default function HistoryPage() {
 
     const formattedDateString = editingQuote ? `Ngày ${new Date(editingQuote.date).getDate().toString().padStart(2, '0')} tháng ${(new Date(editingQuote.date).getMonth() + 1).toString().padStart(2, '0')} năm ${new Date(editingQuote.date).getFullYear()}` : '';
 
+const handleSharePdf = async () => {
+  if (!printRef.current) return;
+
+  const html2canvas = (await import("html2canvas-pro")).default;
+  const { jsPDF } = await import("jspdf");
+
+  const tableWrapper = printRef.current.querySelector(".overflow-x-auto") as HTMLElement;
+  const prevOverflow = tableWrapper?.style.overflow;
+  if (tableWrapper) tableWrapper.style.overflow = "visible";
+
+  const canvas = await html2canvas(printRef.current, {
+    scale: 2,
+    useCORS: true,
+    allowTaint: true,
+    backgroundColor: "#ffffff",
+    width: printRef.current.scrollWidth,
+    height: printRef.current.scrollHeight,
+    windowWidth: printRef.current.scrollWidth,
+    windowHeight: printRef.current.scrollHeight,
+  });
+
+  if (tableWrapper) tableWrapper.style.overflow = prevOverflow || "";
+
+  const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+  const A4_WIDTH = 210, A4_HEIGHT = 297, MARGIN = 10;
+  const contentWidth = A4_WIDTH - MARGIN * 2;
+  const scale = contentWidth / (canvas.width * 0.264583);
+  const pageContentHeight = A4_HEIGHT - MARGIN * 2;
+  const totalPages = Math.ceil((canvas.height * 0.264583 * scale) / pageContentHeight);
+
+  for (let page = 0; page < totalPages; page++) {
+    if (page > 0) pdf.addPage();
+    const srcY = page * pageContentHeight / (0.264583 * scale);
+    const srcH = Math.min(pageContentHeight / (0.264583 * scale), canvas.height - srcY);
+    const pageCanvas = document.createElement("canvas");
+    pageCanvas.width = canvas.width;
+    pageCanvas.height = Math.ceil(srcH);
+    const ctx = pageCanvas.getContext("2d")!;
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
+    ctx.drawImage(canvas, 0, -srcY);
+    const pageHeightMm = pageCanvas.height * 0.264583 * scale;
+    pdf.addImage(pageCanvas.toDataURL("image/png"), "PNG", MARGIN, MARGIN, contentWidth, Math.min(pageHeightMm, pageContentHeight));
+  }
+
+  const pdfBlob = pdf.output("blob");
+  const fileName = `Phieu_${editingQuote.customerName || "KH"}_${editingQuote.date}.pdf`;
+  const file = new File([pdfBlob], fileName, { type: "application/pdf" });
+
+  if (navigator.canShare?.({ files: [file] })) {
+    await navigator.share({ files: [file], title: fileName });
+  } else {
+    const url = URL.createObjectURL(pdfBlob);
+    const a = document.createElement("a");
+    a.href = url; a.download = fileName; a.click();
+    URL.revokeObjectURL(url);
+  }
+};
     const handleNativeShare = async () => {
-        let messageText = `✨ PHIẾU MUA HÀNG VAS LIGHTING ✨\n👤 Đối tác/Người mua: ${editingQuote.customerName || "Vãng lai"}\n\n`;
+        let messageText = `✨ PHIẾU MUA HÀNG LIGHTING ✨\n👤 Đối tác/Người mua: ${editingQuote.customerName || "Vãng lai"}\n\n`;
         messageText += `💰 TỔNG TIỀN: ${totalAmount.toLocaleString('vi-VN')}đ\n`;
         if (depositAmount > 0) {
             messageText += `✅ Đã cọc: ${depositAmount.toLocaleString('vi-VN')}đ\n`;
@@ -129,21 +188,18 @@ export default function HistoryPage() {
                             <ArrowLeft size={18} /> Sửa lại
                         </button>
                         <div className="flex gap-2">
-                            <button onClick={() => window.print()} className="flex items-center gap-2 bg-slate-800 text-white px-4 py-2 rounded-xl font-medium hover:bg-slate-700">
-                                <Download size={18} /> Tải PDF
-                            </button>
-                            <button onClick={handleNativeShare} className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-xl font-medium shadow-lg hover:bg-blue-500">
+                            <button onClick={handleSharePdf} className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-xl font-medium shadow-lg hover:bg-blue-500">
                                 <Share2 size={18} /> Chia sẻ
                             </button>
                         </div>
                     </div>
 
-                    <div className="text-black font-sans text-[13px] print:text-[12px] leading-relaxed">
+                    <div ref={printRef} className="text-black font-sans text-[13px] print:text-[12px] leading-relaxed">
                         <div className="grid grid-cols-2 gap-4 mb-6">
                             <div>
-                                <h1 className="font-bold text-lg text-blue-800 print:text-black">VAS Lighting</h1>
+                                <h1 className="font-bold text-lg text-blue-800 print:text-black">Lighting</h1>
                                 <p className="font-medium">Địa chỉ: Hai Bà Trưng-Hà Nội</p>
-                                <p className="font-medium">SĐT: 0793398668</p>
+                                <p className="font-medium">SĐT: 0793398668 - 0383764983</p>
                             </div>
                             <div className="text-right flex flex-col items-end">
                                 <h2 className="font-bold text-xl uppercase tracking-wider mb-1">PHIẾU MUA HÀNG</h2>
@@ -156,7 +212,7 @@ export default function HistoryPage() {
                             <div className="flex gap-2"><span className="font-semibold w-12 shrink-0">SĐT:</span><span className="border-b border-dotted border-gray-400 flex-1">{editingQuote.phone}</span></div>
                             <div className="flex gap-2 col-span-2"><span className="font-semibold w-28 shrink-0">Người mua:</span><span className="border-b border-dotted border-gray-400 flex-1">{editingQuote.customerName}</span></div>
                             <div className="flex gap-2 col-span-2"><span className="font-semibold w-28 shrink-0">Địa chỉ:</span><span className="border-b border-dotted border-gray-400 flex-1">{editingQuote.address}</span></div>
-                            <div className="flex gap-2 col-span-2"><span className="font-semibold w-[140px] shrink-0">Hình thức thanh toán:</span><span className="border-b border-dotted border-gray-400 flex-1">{editingQuote.paymentMethod}</span></div>
+                            <div className="flex gap-2 col-span-2"><span className="font-semibold w-[140px] shrink-0">Thanh toán:</span><span className="border-b border-dotted border-gray-400 flex-1">{editingQuote.paymentMethod}</span></div>
                         </div>
 
                         {/* BẢNG IN XUẤT */}
@@ -250,7 +306,7 @@ export default function HistoryPage() {
                         <input placeholder="Số điện thoại" value={editingQuote.phone} onChange={(e) => handleUpdateField("phone", e.target.value)} className="w-full text-sm p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-blue-500" />
                     </div>
                     <input placeholder="Địa chỉ giao hàng" value={editingQuote.address} onChange={(e) => handleUpdateField("address", e.target.value)} className="w-full text-sm p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-blue-500" />
-                    <input placeholder="Hình thức thanh toán" value={editingQuote.paymentMethod} onChange={(e) => handleUpdateField("paymentMethod", e.target.value)} className="w-full text-sm p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-blue-500" />
+                    <input placeholder="Thanh toán" value={editingQuote.paymentMethod} onChange={(e) => handleUpdateField("paymentMethod", e.target.value)} className="w-full text-sm p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-blue-500" />
                 </div>
 
                 {/* Danh sách vật tư */}

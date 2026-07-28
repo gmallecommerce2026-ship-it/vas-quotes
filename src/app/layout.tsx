@@ -10,9 +10,16 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "VAS Lighting Home",
-  description: "Benefits",
+  title: "Lighting Home",
+  description: "Lighting Design",
 };
+
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+};
+
 
 export default function RootLayout({
   children,

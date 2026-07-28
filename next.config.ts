@@ -8,6 +8,7 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
+  basePath: "/vas-quotes",
   images: {
     unoptimized: true,
     remotePatterns: [
@@ -17,6 +18,7 @@ const nextConfig = {
       },
     ],
   },
+  turbopack: {},
   
   // --- THÊM PHẦN NÀY ĐỂ TẮT CẢNH BÁO TURBOPACK ---
   // Điều này xác nhận rằng bạn vẫn muốn dùng Webpack loader cho SVG

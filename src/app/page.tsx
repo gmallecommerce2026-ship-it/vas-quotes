@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { Eye, Share2, ArrowLeft, Image as ImageIcon, Download, Copy, X, Trash2, Plus, Save, FileText, Calendar, Search } from "lucide-react";
 import { useLocalDatabase } from "@/hooks/useLocalDatabase"; // Đảm bảo đường dẫn này trỏ đúng tới hook của bạn
+import { useRef } from "react";
 
 export default function MasterQuotePage() {
   const { db, saveDb, isLoaded } = useLocalDatabase();
@@ -16,6 +17,7 @@ export default function MasterQuotePage() {
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [addSearchQuery, setAddSearchQuery] = useState("");
+  const printRef = useRef<HTMLDivElement>(null);
 
   // Kiểm tra trạng thái isLoaded để tránh lỗi Hydration Mismatch của Next.js
   if (!isLoaded) {
@@ -93,7 +95,7 @@ export default function MasterQuotePage() {
   };
 
   const handleNativeShare = (productsToShare: any[], title: string) => {
-    let messageText = `✨ ${title.toUpperCase()} ✨\nVAS Lighting - 0793398668\n\n`;
+    let messageText = `✨ ${title.toUpperCase()} ✨\Lighting - 0793398668\n\n`;
     productsToShare.forEach((item, index) => {
       messageText += `${index + 1}. ${item.name} - ${item.price.toLocaleString('vi-VN')}đ/${item.unit}\n`;
     });
@@ -106,7 +108,66 @@ export default function MasterQuotePage() {
       alert("Đã sao chép nội dung báo giá! Bạn có thể dán (Paste) vào Zalo.");
     }
   };
+  const handleSharePdf = async () => {
+    if (!printRef.current) return;
 
+    const html2canvas = (await import("html2canvas-pro")).default;
+    const { jsPDF } = await import("jspdf");
+
+    const tableWrapper = printRef.current.querySelector(".overflow-x-auto") as HTMLElement;
+    const prevOverflow = tableWrapper?.style.overflow;
+    if (tableWrapper) tableWrapper.style.overflow = "visible";
+
+    const canvas = await html2canvas(printRef.current, {
+      scale: 2,
+      useCORS: true,
+      allowTaint: true,
+      backgroundColor: "#ffffff",
+      width: printRef.current.scrollWidth,
+      height: printRef.current.scrollHeight,
+      windowWidth: printRef.current.scrollWidth,
+      windowHeight: printRef.current.scrollHeight,
+    });
+
+    if (tableWrapper) tableWrapper.style.overflow = prevOverflow || "";
+
+    const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+    const A4_WIDTH = 210, A4_HEIGHT = 297, MARGIN = 10;
+    const contentWidth = A4_WIDTH - MARGIN * 2;
+    const scale = contentWidth / (canvas.width * 0.264583);
+    const totalHeightMm = canvas.height * 0.264583 * scale;
+    const pageContentHeight = A4_HEIGHT - MARGIN * 2;
+    const totalPages = Math.ceil(totalHeightMm / pageContentHeight);
+
+    for (let page = 0; page < totalPages; page++) {
+      if (page > 0) pdf.addPage();
+      const srcY = page * pageContentHeight / (0.264583 * scale);
+      const srcH = Math.min(pageContentHeight / (0.264583 * scale), canvas.height - srcY);
+      const pageCanvas = document.createElement("canvas");
+      pageCanvas.width = canvas.width;
+      pageCanvas.height = Math.ceil(srcH);
+      const ctx = pageCanvas.getContext("2d")!;
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
+      ctx.drawImage(canvas, 0, -srcY);
+      const pageImg = pageCanvas.toDataURL("image/png");
+      const pageHeightMm = pageCanvas.height * 0.264583 * scale;
+      pdf.addImage(pageImg, "PNG", MARGIN, MARGIN, contentWidth, Math.min(pageHeightMm, pageContentHeight));
+    }
+
+    const pdfBlob = pdf.output("blob");
+    const fileName = `Bao_Gia_${editingQuote.name || "VAS"}_${new Date().toLocaleDateString('vi-VN').replace(/\//g, '-')}.pdf`;
+    const file = new File([pdfBlob], fileName, { type: "application/pdf" });
+
+    if (navigator.canShare?.({ files: [file] })) {
+      await navigator.share({ files: [file], title: fileName });
+    } else {
+      const url = URL.createObjectURL(pdfBlob);
+      const a = document.createElement("a");
+      a.href = url; a.download = fileName; a.click();
+      URL.revokeObjectURL(url);
+    }
+  };
   const availableProductsToInclude = masterCatalog.filter((p: any) => !editingQuote.products.some((tp: any) => tp.id === p.id));
   const filteredAddProducts = availableProductsToInclude.filter((p: any) => {
     if (!addSearchQuery) return true;
@@ -136,19 +197,16 @@ export default function MasterQuotePage() {
               <ArrowLeft size={18} /> {previewFrom === "edit" ? "Quay lại sửa" : "Quay lại trang chủ"}
             </button>
             <div className="flex gap-2">
-              <button onClick={() => window.print()} className="flex items-center gap-2 bg-slate-800 text-white px-4 py-2 rounded-xl font-medium">
-                <Download size={18} /> Tải PDF
-              </button>
-              <button onClick={() => handleNativeShare(editingQuote.products, editingQuote.name)} className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-xl font-medium shadow-lg">
-                <Share2 size={18} /> Chia sẻ Zalo
+              <button onClick={handleSharePdf} className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-xl font-medium shadow-lg">
+                <Share2 size={18} /> Chia sẻ
               </button>
             </div>
           </div>
 
-          <div className="text-black font-sans text-[13px] print:text-[12px] leading-relaxed">
+          <div ref={printRef} className="text-black font-sans text-[13px] print:text-[12px] leading-relaxed">
             <div className="grid grid-cols-2 gap-4 mb-8">
               <div>
-                <h1 className="font-bold text-lg text-blue-800 print:text-black">VAS Lighting</h1>
+                <h1 className="font-bold text-lg text-blue-800 print:text-black">Lighting</h1>
                 <p className="font-medium">Địa chỉ: Hai Bà Trưng-Hà Nội</p>
                 <p className="font-medium">SĐT: 0793398668</p>
               </div>
@@ -159,41 +217,43 @@ export default function MasterQuotePage() {
               </div>
             </div>
 
-            <table className="w-full border-collapse text-[13px] text-center">
-              <thead className="bg-slate-100 print:bg-slate-100 font-bold text-slate-700 print:text-black">
-                <tr>
-                  <th className="border border-slate-300 print:border-slate-400 p-2.5 w-[40px]">STT</th>
-                  <th className="border border-slate-300 print:border-slate-400 p-2.5 w-[60px]">Hình ảnh</th>
-                  <th className="border border-slate-300 print:border-slate-400 p-2.5 text-left w-[200px]">Tên vật tư, hàng hóa</th>
-                  <th className="border border-slate-300 print:border-slate-400 p-2.5 text-left">Thông số</th>
-                  <th className="border border-slate-300 print:border-slate-400 p-2.5 w-[50px]">ĐVT</th>
-                  <th className="border border-slate-300 print:border-slate-400 p-2.5 text-right w-[100px]">Đơn giá</th>
-                </tr>
-              </thead>
-              <tbody>
-                {editingQuote.products.map((item: any, index: number) => (
-                  <tr key={item.id} className="h-10 hover:bg-slate-50 print:hover:bg-transparent transition-colors">
-                    <td className="border border-slate-300 print:border-slate-400 p-2 text-slate-600 print:text-black font-medium">{index + 1}</td>
-                    <td className="border border-slate-300 print:border-slate-400 p-2">
-                      <div className="w-9 h-9 border border-slate-200 rounded mx-auto flex items-center justify-center text-slate-300 bg-slate-50 print:border-slate-400 print:bg-transparent overflow-hidden">
-                        {item.image ? (
-                          <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
-                        ) : (
-                          <ImageIcon size={14} />
-                        )}
-                      </div>
-                    </td>
-                    <td className="border border-slate-300 print:border-slate-400 p-2 text-left font-semibold text-slate-800 print:text-black whitespace-normal">{item.name}</td>
-                    <td className="border border-slate-300 print:border-slate-400 p-2 text-left whitespace-pre-line text-[11px] text-slate-500 print:text-black">{item.specs}</td>
-                    <td className="border border-slate-300 print:border-slate-400 p-2 text-slate-600 print:text-black">{item.unit}</td>
-                    <td className="border border-slate-300 print:border-slate-400 p-2 text-right font-bold text-blue-600 print:text-black">
-                      {item.price.toLocaleString('vi-VN')}đ
-                    </td>
+            <div className="w-full overflow-x-auto border border-slate-300 rounded-xl print:overflow-visible">
+              <table className="w-full min-w-[600px] border-collapse text-[12px] text-center">
+                <thead className="bg-slate-100 print:bg-slate-100 font-bold text-slate-700 print:text-black">
+                  <tr>
+                    <th className="border border-slate-300 print:border-slate-400 p-2.5 w-[40px]">STT</th>
+                    <th className="border border-slate-300 print:border-slate-400 p-2.5 w-[60px]">Hình ảnh</th>
+                    <th className="border border-slate-300 print:border-slate-400 p-2.5 text-left w-[200px]">Tên vật tư, hàng hóa</th>
+                    <th className="border border-slate-300 print:border-slate-400 p-2.5 text-left">Thông số</th>
+                    <th className="border border-slate-300 print:border-slate-400 p-2.5 w-[50px]">ĐVT</th>
+                    <th className="border border-slate-300 print:border-slate-400 p-2.5 text-right w-[100px]">Đơn giá</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {editingQuote.products.map((item: any, index: number) => (
+                    <tr key={item.id} className="h-10 hover:bg-slate-50 print:hover:bg-transparent transition-colors">
+                      <td className="border border-slate-300 print:border-slate-400 p-2 text-slate-600 print:text-black font-medium">{index + 1}</td>
+                      <td className="border border-slate-300 print:border-slate-400 p-2">
+                        <div className="w-9 h-9 border border-slate-200 rounded mx-auto flex items-center justify-center text-slate-300 bg-slate-50 print:border-slate-400 print:bg-transparent overflow-hidden">
+                          {item.image ? (
+                            <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+                          ) : (
+                            <ImageIcon size={14} />
+                          )}
+                        </div>
+                      </td>
+                      <td className="border border-slate-300 print:border-slate-400 p-2 text-left font-semibold text-slate-800 print:text-black whitespace-normal">{item.name}</td>
+                      <td className="border border-slate-300 print:border-slate-400 p-2 text-left whitespace-pre-line text-[11px] text-slate-500 print:text-black">{item.specs}</td>
+                      <td className="border border-slate-300 print:border-slate-400 p-2 text-slate-600 print:text-black">{item.unit}</td>
+                      <td className="border border-slate-300 print:border-slate-400 p-2 text-right font-bold text-blue-600 print:text-black">
+                        {item.price.toLocaleString('vi-VN')}đ
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>  
+          </div> 
         </div>
       </div>
     );
@@ -337,7 +397,7 @@ export default function MasterQuotePage() {
       <header className="py-2 flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Bảng báo giá</h1>
-          <p className="text-slate-500 text-sm">Hệ thống lập báo giá VAS Lighting</p>
+          <p className="text-slate-500 text-sm">Hệ thống lập báo giá Lighting</p>
         </div>
       </header>
 
@@ -357,7 +417,6 @@ export default function MasterQuotePage() {
                 </div>
                 <div className="flex gap-2 border-t border-slate-50 border-dashed pt-3 mt-0.5">
                   <button onClick={(e) => { e.stopPropagation(); setEditingQuote(quote); setPreviewFrom("dashboard"); setView("preview"); }} className="flex-1 bg-slate-50 border text-slate-700 text-xs font-bold py-2 rounded-xl flex items-center justify-center gap-1 hover:bg-slate-100 transition-all"><FileText size={14} /> Xem bản in PDF</button>
-                  <button onClick={(e) => { e.stopPropagation(); handleNativeShare(quote.products, quote.name); }} className="flex-1 bg-blue-50 text-blue-600 text-xs font-bold py-2 rounded-xl flex items-center justify-center gap-1 hover:bg-blue-100 transition-all"><Share2 size={14} /> Chia sẻ (có Zalo)</button>
                 </div>
               </div>
             ))}
@@ -370,45 +429,44 @@ export default function MasterQuotePage() {
       {/* BẢNG GIÁ GỐC NIÊM YẾT - GIAO DIỆN TABLE ĐẦY ĐỦ TRỰC QUAN */}
       <div className="space-y-3">
         <h2 className="text-xs font-bold text-slate-400 uppercase tracking-wider px-1">Bảng giá kho gốc niêm yết</h2>
-        <div className="bg-white p-1 rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-          <div className="overflow-x-auto custom-scrollbar">
-            <table className="w-full border-collapse text-[13px] text-center min-w-[600px]">
-              <thead className="bg-slate-100 font-bold text-slate-700">
-                <tr>
-                  <th className="border border-slate-200 p-2.5 w-[40px]">STT</th>
-                  <th className="border border-slate-200 p-2.5 w-[60px]">Hình ảnh</th>
-                  <th className="border border-slate-200 p-2.5 text-left w-[200px]">Tên vật tư, hàng hóa</th>
-                  <th className="border border-slate-200 p-2.5 text-left">Thông số</th>
-                  <th className="border border-slate-200 p-2.5 w-[50px]">ĐVT</th>
-                  <th className="border border-slate-200 p-2.5 text-right w-[100px]">Đơn giá</th>
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+          <table className="w-full border-collapse text-[10px] text-center table-fixed">
+            <thead className="bg-slate-100 font-bold text-slate-600">
+              <tr>
+                <th className="border border-slate-200 p-1 w-[24px]">#</th>
+                <th className="border border-slate-200 p-1 w-[30px]">Ảnh</th>
+                <th className="border border-slate-200 p-1 text-left">Tên / Thông số</th>
+                <th className="border border-slate-200 p-1 w-[28px]">ĐVT</th>
+                <th className="border border-slate-200 p-1 text-right w-[72px]">Đơn giá</th>
+              </tr>
+            </thead>
+            <tbody>
+              {masterCatalog.length > 0 ? masterCatalog.map((item: any, index: number) => (
+                <tr key={item.id} className="hover:bg-slate-50 transition-colors">
+                  <td className="border border-slate-200 p-1 text-slate-400 font-medium">{index + 1}</td>
+                  <td className="border border-slate-200 p-1">
+                    <div className="w-7 h-7 border border-slate-200 rounded mx-auto flex items-center justify-center text-slate-300 bg-slate-50 overflow-hidden">
+                      {item.image ? (
+                        <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <ImageIcon size={10} />
+                      )}
+                    </div>
+                  </td>
+                  <td className="border border-slate-200 p-1 text-left">
+                    <div className="font-semibold text-slate-800 leading-tight">{item.name}</div>
+                    <div className="text-[9px] text-slate-400 mt-0.5 line-clamp-2 leading-tight">{item.specs?.replace(/\n/g, ' ')}</div>
+                  </td>
+                  <td className="border border-slate-200 p-1 text-slate-500">{item.unit}</td>
+                  <td className="border border-slate-200 p-1 text-right font-bold text-blue-600 whitespace-nowrap">{item.price.toLocaleString('vi-VN')}đ</td>
                 </tr>
-              </thead>
-              <tbody>
-                {masterCatalog.length > 0 ? masterCatalog.map((item: any, index: number) => (
-                  <tr key={item.id} className="hover:bg-slate-50 transition-colors">
-                    <td className="border border-slate-200 p-2 text-slate-500 font-medium">{index + 1}</td>
-                    <td className="border border-slate-200 p-2">
-                      <div className="w-9 h-9 border border-slate-200 rounded mx-auto flex items-center justify-center text-slate-300 bg-slate-50 overflow-hidden">
-                        {item.image ? (
-                          <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
-                        ) : (
-                          <ImageIcon size={14} />
-                        )}
-                      </div>
-                    </td>
-                    <td className="border border-slate-200 p-2 text-left font-semibold text-slate-800 whitespace-normal min-w-[150px]">{item.name}</td>
-                    <td className="border border-slate-200 p-2 text-left whitespace-pre-line text-[11px] text-slate-500 min-w-[150px]">{item.specs}</td>
-                    <td className="border border-slate-200 p-2 text-slate-600">{item.unit}</td>
-                    <td className="border border-slate-200 p-2 text-right font-bold text-blue-600">{item.price.toLocaleString('vi-VN')}đ</td>
-                  </tr>
-                )) : (
-                  <tr>
-                    <td colSpan={6} className="p-8 text-slate-400 italic">Chưa có sản phẩm nào trong kho. Hãy thêm sản phẩm ở trang "Sản Phẩm".</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+              )) : (
+                <tr>
+                  <td colSpan={5} className="p-8 text-slate-400 italic text-xs">Chưa có sản phẩm nào trong kho.</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
 
